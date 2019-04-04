@@ -18,10 +18,68 @@ public class Simulator {
         }
         in.close();
 
-        Queue<Process> completion = roundRobin(processList, 10);
+        System.out.println("Round robin: ");
+        Queue<Process> completion = roundRobin(copy(processList), 10);
         for (Process process : completion) {
             System.out.println(process.id + ": " + process.finishTime);
         }
+
+        System.out.println("Shortest remaining time first: ");
+        completion = srtf(copy(processList));
+        for (Process process : completion) {
+            System.out.println(process.id + ": " + process.finishTime);
+        }
+    }
+
+    public static Queue<Process> copy(Queue<Process> list) {
+        Queue<Process> copyList = new LinkedList<>();
+        for (Process process : list) {
+            copyList.add(process.copy());
+        }
+        return copyList;
+    }
+
+    public static Queue<Process> srtf(Queue<Process> processList) {
+        int currentTime = 0;
+
+        PriorityQueue<Process> queue = new PriorityQueue<>();
+        Queue<Process> completed = new LinkedList<>();
+
+        queue.offer(processList.poll());
+
+        while (!queue.isEmpty()) {
+            Process serving = queue.poll();
+            // handle the case where CPU is idle for sometime
+            currentTime = Math.max(currentTime, serving.arrivalTime);
+
+            // the current executing process finishes before the next one arrives
+            if (!processList.isEmpty()) {
+                Process nextArrival = processList.peek();
+                int possibleRemainingTime = serving.remainingTime - (nextArrival.arrivalTime - currentTime);
+
+                if (possibleRemainingTime > 0) {
+                    currentTime = nextArrival.arrivalTime;
+                    serving.remainingTime = possibleRemainingTime;
+                    queue.offer(processList.poll());
+
+                    queue.offer(serving); // put it back to the queue, pre-emption will be determined in the next iteration of while loop
+                } else { // finish the current process
+                    currentTime += serving.remainingTime;
+                    serving.remainingTime = 0; // finish the executing task
+                    serving.finishTime = currentTime;
+                    completed.add(serving);
+
+                    queue.offer(processList.poll()); // serve the next
+                }
+            } else {
+                currentTime += serving.remainingTime;
+                serving.remainingTime = 0; // finish the executing task
+                serving.finishTime = currentTime;
+                completed.add(serving);
+            }
+        }
+
+        return completed;
     }
 
     public static Queue<Process> roundRobin(Queue<Process> processList, int quantum) {
@@ -33,9 +91,9 @@ public class Simulator {
         queue.offer(processList.poll());
 
         while (!queue.isEmpty()) {
-            Process nextToServe = queue.poll();
+            Process serving = queue.poll();
             // handle the case where CPU is idle for sometime
-            currentTime = Math.max(currentTime, nextToServe.arrivalTime);
+            currentTime = Math.max(currentTime, serving.arrivalTime);
 
             // case 1: next to serve's remaining time larger than quantum
             // -> update remaining time and put it at the end of the queue
@@ -43,21 +101,21 @@ public class Simulator {
             // -> clear remaining time, mark it as complete
             // both cases: update current time
 
-            if (nextToServe.remainingTime > quantum) {
+            if (serving.remainingTime > quantum) {
                 currentTime += quantum;
-                nextToServe.remainingTime -= quantum;
+                serving.remainingTime -= quantum;
 
                 // add other processes that arrived before the next quantum starts
                 while (!processList.isEmpty() && processList.peek().arrivalTime <= currentTime) {
                     queue.add(processList.poll());
                 }
 
-                queue.add(nextToServe);
+                queue.add(serving);
             } else {
-                currentTime += nextToServe.remainingTime;
-                nextToServe.remainingTime = 0;
-                nextToServe.finishTime = currentTime;
-                completed.add(nextToServe);
+                currentTime += serving.remainingTime;
+                serving.remainingTime = 0;
+                serving.finishTime = currentTime;
+                completed.add(serving);
 
                 if (!processList.isEmpty()) {
                     queue.add(processList.poll());
@@ -69,7 +127,7 @@ public class Simulator {
     }
 }
 
-class Process {
+class Process implements Comparable<Process> {
     int id, arrivalTime, burstTime, remainingTime, finishTime;
 
     public Process(int id, int arrivalTime, int burstTime) {
@@ -82,5 +140,14 @@ class Process {
 
     int getWaitingTime() {
         return finishTime - (arrivalTime + burstTime);
+    }
+
+    @Override
+    public int compareTo(Process o) {
+        return this.remainingTime - o.remainingTime;
+    }
+
+    public Process copy() {
+        return new Process(id, arrivalTime, burstTime);
     }
 }
