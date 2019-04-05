@@ -19,13 +19,17 @@ public class Simulator {
         in.close();
 
         System.out.println("FCFS: ");
-        Queue<Process> completion = fcfs(copy(processList));
-        for (Process process : completion) {
+        SchedulingResult result = fcfs(copy(processList));
+        for (Process process : result.completion) {
             System.out.println(process.id + ": " + process.finishTime);
+        }
+        System.out.println("Context switch: ");
+        for (ContextSwitch cs : result.contextSwitches) {
+            System.out.println(cs.time + ": " + cs.processID);
         }
 
         System.out.println("Round robin: ");
-        completion = roundRobin(copy(processList), 10);
+        Queue<Process> completion = roundRobin(copy(processList), 10);
         for (Process process : completion) {
             System.out.println(process.id + ": " + process.finishTime);
         }
@@ -51,19 +55,22 @@ public class Simulator {
         return copyList;
     }
 
-    public static Queue<Process> fcfs(Queue<Process> processList) {
+    public static SchedulingResult fcfs(Queue<Process> processList) {
         int currentTime = 0;
         Queue<Process> completed = new LinkedList<>();
+        List<ContextSwitch> contextSwitches = new ArrayList<>();
 
         while (!processList.isEmpty()) {
             Process serving = processList.poll();
+            contextSwitches.add(new ContextSwitch(currentTime, serving.id));
+
             currentTime += serving.remainingTime;
             serving.remainingTime = 0;
             serving.finishTime = currentTime;
             completed.add(serving);
         }
 
-        return completed;
+        return new SchedulingResult(completed, contextSwitches);
     }
 
     public static Queue<Process> sjf(Queue<Process> processList, double alpha) {
@@ -184,6 +191,25 @@ public class Simulator {
         }
 
         return completed;
+    }
+}
+
+class SchedulingResult {
+    Queue<Process> completion;
+    List<ContextSwitch> contextSwitches;
+
+    public SchedulingResult(Queue<Process> completion, List<ContextSwitch> contextSwitches) {
+        this.completion = completion;
+        this.contextSwitches = contextSwitches;
+    }
+}
+
+class ContextSwitch {
+    int time, processID;
+
+    public ContextSwitch(int time, int processID) {
+        this.time = time;
+        this.processID = processID;
     }
 }
 
