@@ -8,6 +8,22 @@ import java.util.*;
  */
 public class Simulator {
     public static void main(String[] args) throws FileNotFoundException {
+        Queue<Process> processList = loadInput();
+
+        SchedulingResult fcfsResult = fcfs(copy(processList));
+        generateReport(fcfsResult, "FCFS.txt");
+
+        SchedulingResult roundRobinResult = roundRobin(copy(processList), 10);
+        generateReport(roundRobinResult, "RR.txt");
+
+        SchedulingResult srtfResult  = srtf(copy(processList));
+        generateReport(srtfResult, "SRTF.txt");
+
+        SchedulingResult sjfResult = sjf(copy(processList), 0.5);
+        generateReport(sjfResult, "SJF.txt");
+    }
+
+    private static Queue<Process> loadInput() throws FileNotFoundException {
         Scanner in = new Scanner(new File("input.txt"));
         Queue<Process> processList = new LinkedList<>();
         while(in.hasNextLine()) {
@@ -18,29 +34,9 @@ public class Simulator {
             processList.add(new Process(id, arrivalTime, burstTime));
         }
         in.close();
-
-        System.out.println("FCFS: ");
-        SchedulingResult result = fcfs(copy(processList));
-        generateReport(result, "FCFS.txt");
-
-        System.out.println("Round robin: ");
-        Queue<Process> completion = roundRobin(copy(processList), 10);
-        for (Process process : completion) {
-            System.out.println(process.id + ": " + process.finishTime);
-        }
-
-        System.out.println("Shortest remaining time first: ");
-        completion = srtf(copy(processList));
-        for (Process process : completion) {
-            System.out.println(process.id + ": " + process.finishTime);
-        }
-
-        System.out.println("Shortest job first with prediction: ");
-        completion = sjf(copy(processList), 0.5);
-        for (Process process : completion) {
-            System.out.println(process.id + ": " + process.finishTime);
-        }
+        return processList;
     }
+
 
     public static void generateReport(SchedulingResult result, String reportName) throws FileNotFoundException {
         PrintWriter pw = new PrintWriter(new File(reportName));
@@ -90,12 +86,13 @@ public class Simulator {
         return new SchedulingResult(completed, contextSwitches);
     }
 
-    public static Queue<Process> sjf(Queue<Process> processList, double alpha) {
+    public static SchedulingResult sjf(Queue<Process> processList, double alpha) {
         Map<Integer, PredictionAndActualPair> map = new HashMap<>();
 
         int currentTime = 0;
         PriorityQueue<Process> queue = new PriorityQueue<>(Comparator.comparingDouble(o -> o.prediction));
         Queue<Process> completed = new LinkedList<>();
+        List<ContextSwitch> contextSwitches = new ArrayList<>();
 
         queue.offer(processList.poll());
 
@@ -103,6 +100,8 @@ public class Simulator {
             Process serving = queue.poll();
             // handle the case where CPU is idle for sometime
             currentTime = Math.max(currentTime, serving.arrivalTime);
+            contextSwitches.add(new ContextSwitch(currentTime, serving.id));
+
             currentTime += serving.remainingTime;
             serving.finishTime = currentTime;
             completed.add(serving);
@@ -120,14 +119,15 @@ public class Simulator {
             }
         }
 
-        return completed;
+        return new SchedulingResult(completed, contextSwitches);
     }
 
-    public static Queue<Process> srtf(Queue<Process> processList) {
+    public static SchedulingResult srtf(Queue<Process> processList) {
         int currentTime = 0;
 
         PriorityQueue<Process> queue = new PriorityQueue<>(Comparator.comparingDouble(o -> o.remainingTime));
         Queue<Process> completed = new LinkedList<>();
+        List<ContextSwitch> contextSwitches = new ArrayList<>();
 
         queue.offer(processList.poll());
 
@@ -135,6 +135,7 @@ public class Simulator {
             Process serving = queue.poll();
             // handle the case where CPU is idle for sometime
             currentTime = Math.max(currentTime, serving.arrivalTime);
+            contextSwitches.add(new ContextSwitch(currentTime, serving.id));
 
             // the current executing process finishes before the next one arrives
             if (!processList.isEmpty()) {
@@ -163,14 +164,15 @@ public class Simulator {
             }
         }
 
-        return completed;
+        return new SchedulingResult(completed, contextSwitches);
     }
 
-    public static Queue<Process> roundRobin(Queue<Process> processList, int quantum) {
+    public static SchedulingResult roundRobin(Queue<Process> processList, int quantum) {
         int currentTime = 0;
 
         Queue<Process> queue = new LinkedList<>();
         Queue<Process> completed = new LinkedList<>();
+        List<ContextSwitch> contextSwitches = new ArrayList<>();
 
         queue.offer(processList.poll());
 
@@ -178,6 +180,7 @@ public class Simulator {
             Process serving = queue.poll();
             // handle the case where CPU is idle for sometime
             currentTime = Math.max(currentTime, serving.arrivalTime);
+            contextSwitches.add(new ContextSwitch(currentTime, serving.id));
 
             // case 1: next to serve's remaining time larger than quantum
             // -> update remaining time and put it at the end of the queue
@@ -207,7 +210,7 @@ public class Simulator {
             }
         }
 
-        return completed;
+        return new SchedulingResult(completed, contextSwitches);
     }
 }
 
