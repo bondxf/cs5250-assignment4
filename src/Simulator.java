@@ -2,7 +2,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.util.*;
 
 /**
@@ -15,9 +14,9 @@ public class Simulator {
         SchedulingResult fcfsResult = fcfs(copy(processList));
         generateReport(fcfsResult, "FCFS.txt");
 
-        for (int quantum = 1; quantum <= 10; quantum += 1) {
+        for (int quantum = 1; quantum <= 20; quantum += 1) {
             SchedulingResult roundRobinResult = roundRobin(copy(processList), quantum);
-            generateReport(roundRobinResult, "RR-" + quantum + ".txt");
+            generateReport(roundRobinResult, "RR-quantum-" + quantum + ".txt");
         }
 
         SchedulingResult srtfResult  = srtf(copy(processList));
@@ -27,7 +26,7 @@ public class Simulator {
 
         for (double alpha = 0.1; alpha < 1.0 ; alpha += 0.1) {
             SchedulingResult sjfResult = sjf(copy(processList), alpha);
-            generateReport(sjfResult, "SJF-" + df.format(alpha) + ".txt");
+            generateReport(sjfResult, "SJF-alpha-" + df.format(alpha) + ".txt");
         }
     }
 
@@ -61,6 +60,7 @@ public class Simulator {
         }
         double avgWaitingTime = waitingTime / result.completion.size();
         pw.println("average waiting time " + avgWaitingTime);
+        System.out.println(reportName.replace(".txt", "") + "," + avgWaitingTime);
 
         pw.close();
     }
