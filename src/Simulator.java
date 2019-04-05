@@ -18,8 +18,14 @@ public class Simulator {
         }
         in.close();
 
+        System.out.println("FCFS: ");
+        Queue<Process> completion = fcfs(copy(processList));
+        for (Process process : completion) {
+            System.out.println(process.id + ": " + process.finishTime);
+        }
+
         System.out.println("Round robin: ");
-        Queue<Process> completion = roundRobin(copy(processList), 10);
+        completion = roundRobin(copy(processList), 10);
         for (Process process : completion) {
             System.out.println(process.id + ": " + process.finishTime);
         }
@@ -37,6 +43,21 @@ public class Simulator {
             copyList.add(process.copy());
         }
         return copyList;
+    }
+
+    public static Queue<Process> fcfs(Queue<Process> processList) {
+        int currentTime = 0;
+        Queue<Process> completed = new LinkedList<>();
+
+        while (!processList.isEmpty()) {
+            Process serving = processList.poll();
+            currentTime += serving.remainingTime;
+            serving.remainingTime = 0;
+            serving.finishTime = currentTime;
+            completed.add(serving);
+        }
+
+        return completed;
     }
 
     public static Queue<Process> srtf(Queue<Process> processList) {
