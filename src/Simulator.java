@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.*;
 
 /**
@@ -7,7 +8,7 @@ import java.util.*;
  */
 public class Simulator {
     public static void main(String[] args) throws FileNotFoundException {
-        Scanner in = new Scanner(new File("test.txt"));
+        Scanner in = new Scanner(new File("input.txt"));
         Queue<Process> processList = new LinkedList<>();
         while(in.hasNextLine()) {
             String[] tokens = in.nextLine().trim().split(" ");
@@ -20,13 +21,7 @@ public class Simulator {
 
         System.out.println("FCFS: ");
         SchedulingResult result = fcfs(copy(processList));
-        for (Process process : result.completion) {
-            System.out.println(process.id + ": " + process.finishTime);
-        }
-        System.out.println("Context switch: ");
-        for (ContextSwitch cs : result.contextSwitches) {
-            System.out.println(cs.time + ": " + cs.processID);
-        }
+        generateReport(result, "FCFS.txt");
 
         System.out.println("Round robin: ");
         Queue<Process> completion = roundRobin(copy(processList), 10);
@@ -47,6 +42,25 @@ public class Simulator {
         }
     }
 
+    public static void generateReport(SchedulingResult result, String reportName) throws FileNotFoundException {
+        PrintWriter pw = new PrintWriter(new File(reportName));
+
+        for (ContextSwitch cs : result.contextSwitches) {
+            pw.println("(" + cs.time + ", " + cs.processID + ")");
+        }
+
+        double waitingTime = 0.0;
+        Set<Integer> processIDs = new HashSet<>();
+        for (Process process : result.completion) {
+            waitingTime += process.getWaitingTime();
+            processIDs.add(process.id);
+        }
+        double avgWaitingTime = waitingTime / result.completion.size();
+        pw.println("average waiting time " + avgWaitingTime);
+
+        pw.close();
+    }
+
     public static Queue<Process> copy(Queue<Process> list) {
         Queue<Process> copyList = new LinkedList<>();
         for (Process process : list) {
@@ -62,6 +76,9 @@ public class Simulator {
 
         while (!processList.isEmpty()) {
             Process serving = processList.poll();
+            // handle the case where CPU is idle for sometime
+            currentTime = Math.max(currentTime, serving.arrivalTime);
+
             contextSwitches.add(new ContextSwitch(currentTime, serving.id));
 
             currentTime += serving.remainingTime;
