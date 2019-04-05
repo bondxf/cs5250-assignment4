@@ -1,6 +1,8 @@
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.*;
 
 /**
@@ -13,18 +15,24 @@ public class Simulator {
         SchedulingResult fcfsResult = fcfs(copy(processList));
         generateReport(fcfsResult, "FCFS.txt");
 
-        SchedulingResult roundRobinResult = roundRobin(copy(processList), 10);
-        generateReport(roundRobinResult, "RR.txt");
+        for (int quantum = 1; quantum <= 10; quantum += 1) {
+            SchedulingResult roundRobinResult = roundRobin(copy(processList), quantum);
+            generateReport(roundRobinResult, "RR-" + quantum + ".txt");
+        }
 
         SchedulingResult srtfResult  = srtf(copy(processList));
         generateReport(srtfResult, "SRTF.txt");
 
-        SchedulingResult sjfResult = sjf(copy(processList), 0.5);
-        generateReport(sjfResult, "SJF.txt");
+        DecimalFormat df = new DecimalFormat("0.0");
+
+        for (double alpha = 0.1; alpha < 1.0 ; alpha += 0.1) {
+            SchedulingResult sjfResult = sjf(copy(processList), alpha);
+            generateReport(sjfResult, "SJF-" + df.format(alpha) + ".txt");
+        }
     }
 
     private static Queue<Process> loadInput() throws FileNotFoundException {
-        Scanner in = new Scanner(new File("input.txt"));
+        Scanner in = new Scanner(new File("input/input.txt"));
         Queue<Process> processList = new LinkedList<>();
         while(in.hasNextLine()) {
             String[] tokens = in.nextLine().trim().split(" ");
@@ -39,7 +47,7 @@ public class Simulator {
 
 
     public static void generateReport(SchedulingResult result, String reportName) throws FileNotFoundException {
-        PrintWriter pw = new PrintWriter(new File(reportName));
+        PrintWriter pw = new PrintWriter(new File("output/" + reportName));
 
         for (ContextSwitch cs : result.contextSwitches) {
             pw.println("(" + cs.time + ", " + cs.processID + ")");
@@ -107,12 +115,13 @@ public class Simulator {
             completed.add(serving);
             map.put(serving.id, serving.getPredictionAndActualPair());
 
-            if (!processList.isEmpty()) {
+            while (!processList.isEmpty() && (processList.peek().arrivalTime <= currentTime || queue.isEmpty())) {
                 Process nextArrival = processList.poll();
 
                 if (map.containsKey(nextArrival.id)) {
                     PredictionAndActualPair pair = map.get(nextArrival.id);
                     nextArrival.prediction = pair.getNextPrediction(alpha);
+//                    System.out.println("next prediction is " + nextArrival.prediction);
                 }
 
                 queue.offer(nextArrival);
@@ -261,14 +270,23 @@ class Process {
 
 class PredictionAndActualPair {
     double prediction;
-    int actual;
+    double actual;
 
-    public PredictionAndActualPair(double prediction, int actual) {
+    public PredictionAndActualPair(double prediction, double actual) {
         this.prediction = prediction;
         this.actual = actual;
     }
 
     double getNextPrediction(double alpha) {
-        return prediction * (1 - alpha) + alpha * actual;
+        double nextPrediction = alpha * actual + prediction * (1 - alpha);
+        return nextPrediction;
+    }
+
+    @Override
+    public String toString() {
+        return "{" +
+                "prediction=" + prediction +
+                ", actual=" + actual +
+                '}';
     }
 }
