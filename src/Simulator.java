@@ -35,6 +35,12 @@ public class Simulator {
         for (Process process : completion) {
             System.out.println(process.id + ": " + process.finishTime);
         }
+
+        System.out.println("Shortest job first with prediction: ");
+        completion = sjf(copy(processList), 0.5);
+        for (Process process : completion) {
+            System.out.println(process.id + ": " + process.finishTime);
+        }
     }
 
     public static Queue<Process> copy(Queue<Process> list) {
@@ -60,10 +66,43 @@ public class Simulator {
         return completed;
     }
 
+    public static Queue<Process> sjf(Queue<Process> processList, double alpha) {
+        Map<Integer, PredictionAndActualPair> map = new HashMap<>();
+
+        int currentTime = 0;
+        PriorityQueue<Process> queue = new PriorityQueue<>(Comparator.comparingDouble(o -> o.prediction));
+        Queue<Process> completed = new LinkedList<>();
+
+        queue.offer(processList.poll());
+
+        while (!queue.isEmpty()) {
+            Process serving = queue.poll();
+            // handle the case where CPU is idle for sometime
+            currentTime = Math.max(currentTime, serving.arrivalTime);
+            currentTime += serving.remainingTime;
+            serving.finishTime = currentTime;
+            completed.add(serving);
+            map.put(serving.id, serving.getPredictionAndActualPair());
+
+            if (!processList.isEmpty()) {
+                Process nextArrival = processList.poll();
+
+                if (map.containsKey(nextArrival.id)) {
+                    PredictionAndActualPair pair = map.get(nextArrival.id);
+                    nextArrival.prediction = pair.getNextPrediction(alpha);
+                }
+
+                queue.offer(nextArrival);
+            }
+        }
+
+        return completed;
+    }
+
     public static Queue<Process> srtf(Queue<Process> processList) {
         int currentTime = 0;
 
-        PriorityQueue<Process> queue = new PriorityQueue<>();
+        PriorityQueue<Process> queue = new PriorityQueue<>(Comparator.comparingDouble(o -> o.remainingTime));
         Queue<Process> completed = new LinkedList<>();
 
         queue.offer(processList.poll());
@@ -148,8 +187,9 @@ public class Simulator {
     }
 }
 
-class Process implements Comparable<Process> {
+class Process {
     int id, arrivalTime, burstTime, remainingTime, finishTime;
+    double prediction;
 
     public Process(int id, int arrivalTime, int burstTime) {
         this.id = id;
@@ -157,18 +197,32 @@ class Process implements Comparable<Process> {
         this.burstTime = burstTime;
         this.remainingTime = burstTime;
         this.finishTime = -1;
+        this.prediction = 5.0;
     }
 
     int getWaitingTime() {
         return finishTime - (arrivalTime + burstTime);
     }
 
-    @Override
-    public int compareTo(Process o) {
-        return this.remainingTime - o.remainingTime;
+    PredictionAndActualPair getPredictionAndActualPair() {
+        return new PredictionAndActualPair(prediction, burstTime);
     }
 
     public Process copy() {
         return new Process(id, arrivalTime, burstTime);
+    }
+}
+
+class PredictionAndActualPair {
+    double prediction;
+    int actual;
+
+    public PredictionAndActualPair(double prediction, int actual) {
+        this.prediction = prediction;
+        this.actual = actual;
+    }
+
+    double getNextPrediction(double alpha) {
+        return prediction * (1 - alpha) + alpha * actual;
     }
 }
