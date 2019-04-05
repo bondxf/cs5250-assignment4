@@ -11,23 +11,30 @@ public class Simulator {
     public static void main(String[] args) throws FileNotFoundException {
         Queue<Process> processList = loadInput();
 
+        PrintWriter pw = new PrintWriter(new File("averageWaitingTime.csv"));
         SchedulingResult fcfsResult = fcfs(copy(processList));
         generateReport(fcfsResult, "FCFS.txt");
+        pw.println("FCFS,," + fcfsResult.getAverageWaitingTime());
 
-        for (int quantum = 1; quantum <= 20; quantum += 1) {
+        for (int quantum = 1; quantum <= 15; quantum += 1) {
             SchedulingResult roundRobinResult = roundRobin(copy(processList), quantum);
             generateReport(roundRobinResult, "RR-quantum-" + quantum + ".txt");
+            pw.println("RR,quantum=" + quantum + "," + roundRobinResult.getAverageWaitingTime());
         }
 
         SchedulingResult srtfResult  = srtf(copy(processList));
         generateReport(srtfResult, "SRTF.txt");
+        pw.println("SRTF,," + srtfResult.getAverageWaitingTime());
 
         DecimalFormat df = new DecimalFormat("0.0");
 
-        for (double alpha = 0.1; alpha < 1.0 ; alpha += 0.1) {
+        for (double alpha = 0.0; alpha < 1.0 ; alpha += 0.1) {
             SchedulingResult sjfResult = sjf(copy(processList), alpha);
             generateReport(sjfResult, "SJF-alpha-" + df.format(alpha) + ".txt");
+            pw.println("SJF,alpha=" + df.format(alpha) + "," + sjfResult.getAverageWaitingTime());
         }
+
+        pw.close();
     }
 
     private static Queue<Process> loadInput() throws FileNotFoundException {
@@ -52,15 +59,7 @@ public class Simulator {
             pw.println("(" + cs.time + ", " + cs.processID + ")");
         }
 
-        double waitingTime = 0.0;
-        Set<Integer> processIDs = new HashSet<>();
-        for (Process process : result.completion) {
-            waitingTime += process.getWaitingTime();
-            processIDs.add(process.id);
-        }
-        double avgWaitingTime = waitingTime / result.completion.size();
-        pw.println("average waiting time " + avgWaitingTime);
-        System.out.println(reportName.replace(".txt", "") + "," + avgWaitingTime);
+        pw.println("average waiting time " + result.getAverageWaitingTime());
 
         pw.close();
     }
@@ -98,7 +97,13 @@ public class Simulator {
         Map<Integer, PredictionAndActualPair> map = new HashMap<>();
 
         int currentTime = 0;
-        PriorityQueue<Process> queue = new PriorityQueue<>(Comparator.comparingDouble(o -> o.prediction));
+        PriorityQueue<Process> queue = new PriorityQueue<>((o1, o2) -> {
+            if (Math.abs(o1.prediction - o2.prediction) > 0.000001) {
+                return Double.compare(o1.prediction, o2.prediction);
+            } else { // prediction is the same, then order by arrival time
+                return o1.arrivalTime - o2.arrivalTime;
+            }
+        });
         Queue<Process> completed = new LinkedList<>();
         List<ContextSwitch> contextSwitches = new ArrayList<>();
 
@@ -134,7 +139,16 @@ public class Simulator {
     public static SchedulingResult srtf(Queue<Process> processList) {
         int currentTime = 0;
 
-        PriorityQueue<Process> queue = new PriorityQueue<>(Comparator.comparingDouble(o -> o.remainingTime));
+        PriorityQueue<Process> queue = new PriorityQueue<>(new Comparator<Process>() {
+            @Override
+            public int compare(Process o1, Process o2) {
+                if (o1.remainingTime != o2.remainingTime) {
+                    return o1.remainingTime - o2.remainingTime;
+                } else { // if remaining time is the same, order by arrival time
+                    return o1.arrivalTime - o2.arrivalTime;
+                }
+            }
+        });
         Queue<Process> completed = new LinkedList<>();
         List<ContextSwitch> contextSwitches = new ArrayList<>();
 
@@ -230,6 +244,14 @@ class SchedulingResult {
     public SchedulingResult(Queue<Process> completion, List<ContextSwitch> contextSwitches) {
         this.completion = completion;
         this.contextSwitches = contextSwitches;
+    }
+
+    double getAverageWaitingTime() {
+        double waitingTime = 0.0;
+        for (Process process : completion) {
+            waitingTime += process.getWaitingTime();
+        }
+        return waitingTime / completion.size();
     }
 }
 
