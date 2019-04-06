@@ -22,13 +22,13 @@ public class Simulator {
             pw.println("RR,quantum=" + quantum + "," + roundRobinResult.getAverageWaitingTime());
         }
 
-        SchedulingResult srtfResult  = srtf(copy(processList));
+        SchedulingResult srtfResult = srtf(copy(processList));
         generateReport(srtfResult, "SRTF.txt");
         pw.println("SRTF,," + srtfResult.getAverageWaitingTime());
 
         DecimalFormat df = new DecimalFormat("0.0");
 
-        for (double alpha = 0.0; alpha < 1.0 ; alpha += 0.1) {
+        for (double alpha = 0.0; alpha < 1.0; alpha += 0.1) {
             SchedulingResult sjfResult = sjf(copy(processList), alpha);
             generateReport(sjfResult, "SJF-alpha-" + df.format(alpha) + ".txt");
             pw.println("SJF,alpha=" + df.format(alpha) + "," + sjfResult.getAverageWaitingTime());
@@ -37,10 +37,10 @@ public class Simulator {
         pw.close();
     }
 
-    private static Queue<Process> loadInput() throws FileNotFoundException {
+    static Queue<Process> loadInput() throws FileNotFoundException {
         Scanner in = new Scanner(new File("input/input.txt"));
         Queue<Process> processList = new LinkedList<>();
-        while(in.hasNextLine()) {
+        while (in.hasNextLine()) {
             String[] tokens = in.nextLine().trim().split(" ");
             int id = Integer.parseInt(tokens[0]);
             int arrivalTime = Integer.parseInt(tokens[1]);
@@ -51,20 +51,16 @@ public class Simulator {
         return processList;
     }
 
-
-    public static void generateReport(SchedulingResult result, String reportName) throws FileNotFoundException {
+    static void generateReport(SchedulingResult result, String reportName) throws FileNotFoundException {
         PrintWriter pw = new PrintWriter(new File("output/" + reportName));
-
         for (ContextSwitch cs : result.contextSwitches) {
             pw.println("(" + cs.time + ", " + cs.processID + ")");
         }
-
         pw.println("average waiting time " + result.getAverageWaitingTime());
-
         pw.close();
     }
 
-    public static Queue<Process> copy(Queue<Process> list) {
+    static Queue<Process> copy(Queue<Process> list) {
         Queue<Process> copyList = new LinkedList<>();
         for (Process process : list) {
             copyList.add(process.copy());
@@ -72,7 +68,7 @@ public class Simulator {
         return copyList;
     }
 
-    public static SchedulingResult fcfs(Queue<Process> processList) {
+    static SchedulingResult fcfs(Queue<Process> processList) {
         int currentTime = 0;
         Queue<Process> completed = new LinkedList<>();
         List<ContextSwitch> contextSwitches = new ArrayList<>();
@@ -93,7 +89,7 @@ public class Simulator {
         return new SchedulingResult(completed, contextSwitches);
     }
 
-    public static SchedulingResult sjf(Queue<Process> processList, double alpha) {
+    static SchedulingResult sjf(Queue<Process> processList, double alpha) {
         Map<Integer, PredictionAndActualPair> map = new HashMap<>();
 
         int currentTime = 0;
@@ -136,7 +132,7 @@ public class Simulator {
         return new SchedulingResult(completed, contextSwitches);
     }
 
-    public static SchedulingResult srtf(Queue<Process> processList) {
+    static SchedulingResult srtf(Queue<Process> processList) {
         int currentTime = 0;
 
         PriorityQueue<Process> queue = new PriorityQueue<>(new Comparator<Process>() {
@@ -190,7 +186,7 @@ public class Simulator {
         return new SchedulingResult(completed, contextSwitches);
     }
 
-    public static SchedulingResult roundRobin(Queue<Process> processList, int quantum) {
+    static SchedulingResult roundRobin(Queue<Process> processList, int quantum) {
         int currentTime = 0;
 
         Queue<Process> queue = new LinkedList<>();
@@ -241,7 +237,7 @@ class SchedulingResult {
     Queue<Process> completion;
     List<ContextSwitch> contextSwitches;
 
-    public SchedulingResult(Queue<Process> completion, List<ContextSwitch> contextSwitches) {
+    SchedulingResult(Queue<Process> completion, List<ContextSwitch> contextSwitches) {
         this.completion = completion;
         this.contextSwitches = contextSwitches;
     }
@@ -258,7 +254,7 @@ class SchedulingResult {
 class ContextSwitch {
     int time, processID;
 
-    public ContextSwitch(int time, int processID) {
+    ContextSwitch(int time, int processID) {
         this.time = time;
         this.processID = processID;
     }
@@ -268,7 +264,7 @@ class Process {
     int id, arrivalTime, burstTime, remainingTime, finishTime;
     double prediction;
 
-    public Process(int id, int arrivalTime, int burstTime) {
+    Process(int id, int arrivalTime, int burstTime) {
         this.id = id;
         this.arrivalTime = arrivalTime;
         this.burstTime = burstTime;
@@ -285,7 +281,7 @@ class Process {
         return new PredictionAndActualPair(prediction, burstTime);
     }
 
-    public Process copy() {
+    Process copy() {
         return new Process(id, arrivalTime, burstTime);
     }
 }
@@ -294,7 +290,7 @@ class PredictionAndActualPair {
     double prediction;
     double actual;
 
-    public PredictionAndActualPair(double prediction, double actual) {
+    PredictionAndActualPair(double prediction, double actual) {
         this.prediction = prediction;
         this.actual = actual;
     }
