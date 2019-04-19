@@ -173,7 +173,9 @@ public class Simulator {
                     serving.finishTime = currentTime;
                     completed.add(serving);
 
-                    queue.offer(processList.poll()); // serve the next
+                    if (nextArrival.arrivalTime < currentTime || queue.isEmpty()) {
+                        queue.offer(processList.poll()); // serve the next
+                    }
                 }
             } else {
                 currentTime += serving.remainingTime;
