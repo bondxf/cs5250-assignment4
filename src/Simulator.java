@@ -223,7 +223,7 @@ public class Simulator {
                 serving.finishTime = currentTime;
                 completed.add(serving);
 
-                if (!processList.isEmpty()) {
+                if (queue.isEmpty() && !processList.isEmpty()) {
                     queue.add(processList.poll());
                 }
             }
