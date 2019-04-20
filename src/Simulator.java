@@ -12,27 +12,34 @@ public class Simulator {
         Queue<Process> processList = loadInput();
 
         PrintWriter pw = new PrintWriter(new File("averageWaitingTime.csv"));
+        System.out.println("FCFS simulation started");
         SchedulingResult fcfsResult = fcfs(copy(processList));
+        System.out.println("FCFS simulation done");
         generateReport(fcfsResult, "FCFS.txt");
         pw.println("FCFS,," + fcfsResult.getAverageWaitingTime());
 
+        System.out.println("RR simulation started");
         for (int quantum = 1; quantum <= 15; quantum += 1) {
             SchedulingResult roundRobinResult = roundRobin(copy(processList), quantum);
             generateReport(roundRobinResult, "RR-quantum-" + quantum + ".txt");
             pw.println("RR,quantum=" + quantum + "," + roundRobinResult.getAverageWaitingTime());
         }
+        System.out.println("RR simulation done");
 
+        System.out.println("SRTF simulation started");
         SchedulingResult srtfResult = srtf(copy(processList));
         generateReport(srtfResult, "SRTF.txt");
         pw.println("SRTF,," + srtfResult.getAverageWaitingTime());
+        System.out.println("SRTF simulation done");
 
+        System.out.println("SJF simulation started");
         DecimalFormat df = new DecimalFormat("0.0");
-
         for (double alpha = 0.0; alpha < 1.0; alpha += 0.1) {
             SchedulingResult sjfResult = sjf(copy(processList), alpha);
             generateReport(sjfResult, "SJF-alpha-" + df.format(alpha) + ".txt");
             pw.println("SJF,alpha=" + df.format(alpha) + "," + sjfResult.getAverageWaitingTime());
         }
+        System.out.println("SJF simulation done");
 
         pw.close();
     }
